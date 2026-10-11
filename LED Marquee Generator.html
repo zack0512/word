@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>經典黑底白字電子字幕機</title>
+    <!-- Tailwind CSS for modern responsive UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['Courier New', Courier, monospace],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .marquee-animating {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee linear infinite;
+        }
+
+        /* LED dot matrix effect simulation */
+        .led-screen {
+            background-color: #000;
+            box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans selection:bg-slate-700 selection:text-white">
+
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white shadow-inner">
+                    <i class="fa-solid fa-display text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wide text-white">LED 電子字幕機</h1>
+                    <p class="text-xs text-slate-400">輸入文字，打造專屬您的跑馬燈效果</p>
+                </div>
+            </div>
+            <button id="header-fullscreen-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 transition text-sm font-medium rounded-xl border border-slate-700 flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-expand"></i>
+                <span class="hidden sm:inline">全螢幕模式</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 space-y-6">
+        
+        <!-- Preview Marquee Screen -->
+        <section class="space-y-2">
+            <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+                <span class="flex items-center space-x-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="font-medium text-slate-300">即時預覽</span>
+                </span>
+                <span id="char-count">0 字元</span>
+            </div>
+            
+            <div id="screen-container" class="led-screen relative w-full h-48 md:h-64 rounded-2xl border border-slate-800 overflow-hidden flex items-center">
+                <!-- Glowing scanline overlay -->
+                <div class="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] z-10 opacity-60"></div>
+                
+                <!-- Marquee text wrapper -->
+                <div id="marquee-track" class="w-full overflow-hidden whitespace-nowrap relative py-4">
+                    <div id="marquee-text" class="marquee-animating font-mono font-bold tracking-wider px-4 text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.7)]">
+                        請在下方輸入您想顯示的跑馬燈文字...
+                    </div>
+                </div>
+
+                <!-- Overlay controls when mouse hovers or for mobile -->
+                <div class="absolute bottom-3 right-3 z-20 flex items-center space-x-2 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 p-1.5 rounded-xl shadow-lg">
+                    <button id="screen-play-pause" title="暫停 / 播放" class="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-200 transition">
+                        <i class="fa-solid fa-pause text-xs" id="play-pause-icon"></i>
+                    </button>
+                    <button id="screen-reverse" title="反轉方向" class="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-200 transition">
+                        <i class="fa-solid fa-right-left text-xs"></i>
+                    </button>
+                    <button id="screen-fullscreen" title="全螢幕" class="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-200 transition">
+                        <i class="fa-solid fa-expand text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Input Card -->
+            <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label for="text-input" class="text-sm font-semibold text-slate-200 flex items-center space-x-2">
+                            <i class="fa-solid fa-keyboard text-slate-400"></i>
+                            <span>輸入字幕內容</span>
+                        </label>
+                        <button id="clear-btn" class="text-xs text-slate-400 hover:text-slate-200 transition">清空文字</button>
+                    </div>
+                    <textarea id="text-input" rows="3" placeholder="在此輸入文字，將即時轉換為跑馬燈..." class="w-full bg-slate-950 border border-slate-800 focus:border-slate-600 focus:ring-1 focus:ring-slate-600 rounded-xl p-3 text-white placeholder-slate-600 text-sm md:text-base outline-none resize-none transition shadow-inner">歡迎使用經典黑底白字電子字幕機！請在此輸入文字...</textarea>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="space-y-2">
+                    <span class="text-xs font-medium text-slate-400 block">快速範本：</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="preset-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium transition text-slate-300">🔥 限時特賣 5折起</button>
+                        <button class="preset-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium transition text-slate-300">🚨 告示：請保持安靜</button>
+                        <button class="preset-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium transition text-slate-300">✨ 歡迎光臨 本店開幕</button>
+                        <button class="preset-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium transition text-slate-300">🎯 注意前方落石</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-5">
+                <h2 class="text-sm font-semibold text-slate-200 flex items-center space-x-2 border-b border-slate-800 pb-3">
+                    <i class="fa-solid fa-sliders text-slate-400"></i>
+                    <span>跑馬燈屬性設定</span>
+                </h2>
+
+                <!-- Speed Control -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-medium text-slate-300">滾動速度</span>
+                        <span id="speed-val" class="font-mono text-slate-400">12s</span>
+                    </div>
+                    <input id="speed-range" type="range" min="3" max="30" step="1" value="12" class="w-full accent-slate-400 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Font Size Control -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-medium text-slate-300">字體大小</span>
+                        <span id="fontsize-val" class="font-mono text-slate-400">48px</span>
+                    </div>
+                    <input id="fontsize-range" type="range" min="24" max="120" step="4" value="48" class="w-full accent-slate-400 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Direction Toggle -->
+                <div class="space-y-2">
+                    <span class="text-xs font-medium text-slate-300 block">滾動方向</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="dir-left-btn" class="py-2 bg-slate-800 border border-slate-700 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-white shadow-sm">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>向左滾動</span>
+                        </button>
+                        <button id="dir-right-btn" class="py-2 bg-slate-800/50 border border-slate-800 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-slate-400 shadow-sm">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            <span>向右滾動</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+        <p>LED Marquee Generator &bull; 打造沉浸式黑底白字字幕機體驗</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const textInput = document.getElementById('text-input');
+            const marqueeText = document.getElementById('marquee-text');
+            const charCount = document.getElementById('char-count');
+            const speedRange = document.getElementById('speed-range');
+            const speedVal = document.getElementById('speed-val');
+            const fontSizeRange = document.getElementById('fontsize-range');
+            const fontSizeVal = document.getElementById('fontsize-val');
+            const clearBtn = document.getElementById('clear-btn');
+            
+            const screenContainer = document.getElementById('screen-container');
+            const playPauseBtn = document.getElementById('screen-play-pause');
+            const playPauseIcon = document.getElementById('play-pause-icon');
+            const reverseBtn = document.getElementById('screen-reverse');
+            const fullscreenBtn = document.getElementById('screen-fullscreen');
+            const headerFullscreenBtn = document.getElementById('header-fullscreen-btn');
+            
+            const dirLeftBtn = document.getElementById('dir-left-btn');
+            const dirRightBtn = document.getElementById('dir-right-btn');
+            const presetBtns = document.querySelectorAll('.preset-btn');
+
+            let isPlaying = true;
+            let scrollDirection = 'normal'; // 'normal' (left) or 'reverse' (right)
+
+            // Update marquee text content
+            function updateMarqueeText() {
+                const val = textInput.value.trim() || '請輸入文字...';
+                marqueeText.textContent = val;
+                charCount.textContent = `${textInput.value.length} 字元`;
+            }
+
+            // Update animation style properties
+            function updateMarqueeStyles() {
+                const speed = speedRange.value;
+                const fontSize = fontSizeRange.value;
+
+                speedVal.textContent = speed + 's';
+                fontSizeVal.textContent = fontSize + 'px';
+
+                marqueeText.style.fontSize = fontSize + 'px';
+                
+                // Calculate dynamic animation duration based on text length to keep comfortable speed
+                const lengthFactor = Math.max(1, textInput.value.length / 15);
+                const computedDuration = parseFloat(speed) * lengthFactor;
+
+                marqueeText.style.animationDuration = computedDuration + 's';
+                marqueeText.style.animationDirection = scrollDirection;
+            }
+
+            // Event Listeners for Input
+            textInput.addEventListener('input', () => {
+                updateMarqueeText();
+                updateMarqueeStyles();
+            });
+
+            speedRange.addEventListener('input', updateMarqueeStyles);
+            fontSizeRange.addEventListener('input', updateMarqueeStyles);
+
+            clearBtn.addEventListener('click', () => {
+                textInput.value = '';
+                updateMarqueeText();
+                updateMarqueeStyles();
+                textInput.focus();
+            });
+
+            // Play / Pause Toggle
+            function togglePlayPause() {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    marqueeText.style.animationPlayState = 'running';
+                    playPauseIcon.className = 'fa-solid fa-pause text-xs';
+                } else {
+                    marqueeText.style.animationPlayState = 'paused';
+                    playPauseIcon.className = 'fa-solid fa-play text-xs';
+                }
+            }
+
+            playPauseBtn.addEventListener('click', togglePlayPause);
+
+            // Reverse Direction Toggle
+            function toggleDirection() {
+                scrollDirection = scrollDirection === 'normal' ? 'reverse' : 'normal';
+                marqueeText.style.animationDirection = scrollDirection;
+                
+                if (scrollDirection === 'normal') {
+                    dirLeftBtn.className = 'py-2 bg-slate-800 border border-slate-700 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-white shadow-sm';
+                    dirRightBtn.className = 'py-2 bg-slate-800/50 border border-slate-800 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-slate-400 shadow-sm';
+                } else {
+                    dirRightBtn.className = 'py-2 bg-slate-800 border border-slate-700 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-white shadow-sm';
+                    dirLeftBtn.className = 'py-2 bg-slate-800/50 border border-slate-800 text-xs font-medium rounded-xl hover:bg-slate-700 transition flex items-center justify-center space-x-1.5 text-slate-400 shadow-sm';
+                }
+            }
+
+            reverseBtn.addEventListener('click', toggleDirection);
+            dirLeftBtn.addEventListener('click', () => {
+                if (scrollDirection !== 'normal') toggleDirection();
+            });
+            dirRightBtn.addEventListener('click', () => {
+                if (scrollDirection !== 'reverse') toggleDirection();
+            });
+
+            // Fullscreen handling
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    if (screenContainer.requestFullscreen) {
+                        screenContainer.requestFullscreen();
+                    } else if (screenContainer.webkitRequestFullscreen) {
+                        screenContainer.webkitRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            }
+
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            headerFullscreenBtn.addEventListener('click', () => {
+                // Fullscreen the entire app or preview screen for maximum effect
+                toggleFullscreen();
+            });
+
+            // Preset Buttons Click Handler
+            presetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const presetText = btn.textContent.replace(/^[^\w\u4e00-\u9fa5]+/, '').trim();
+                    textInput.value = presetText;
+                    updateMarqueeText();
+                    updateMarqueeStyles();
+                });
+            });
+
+            // Initial call
+            updateMarqueeText();
+            updateMarqueeStyles();
+        });
+    </script>
+</body>
+</html>
